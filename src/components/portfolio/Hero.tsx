@@ -128,7 +128,7 @@ export function Hero() {
               {/* Corner brackets */}
               <CornerBrackets />
               <img
-                src={portrait}
+                src="https://i.postimg.cc/x8q3H5Pr/photo.jpg"
                 alt="Sanya Verma, Software Engineer"
                 width={896}
                 height={1152}
