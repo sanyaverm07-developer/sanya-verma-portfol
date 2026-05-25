@@ -1,4 +1,3 @@
-import portrait from "@/assets/sanya-portrait.jpg";
 import { ArrowRight, Brain, Code2, Download, Mail, Sparkles, Star } from "lucide-react";
 
 const techMarquee = [
