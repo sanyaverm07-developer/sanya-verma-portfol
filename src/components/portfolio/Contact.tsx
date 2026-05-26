@@ -1,9 +1,36 @@
 import { Github, Linkedin, Mail, MapPin, Phone, Send } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import emailjs from "@emailjs/browser";
 import { SectionLabel } from "./About";
 
+const SERVICE_ID = "service_ixas1nb";
+const TEMPLATE_ID = "template_d6t0bie";
+const PUBLIC_KEY = "itmdpQSjCRsdhWfgs";
+
 export function Contact() {
-  const [sent, setSent] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!formRef.current) return;
+    setStatus("sending");
+    try {
+      await emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, { publicKey: PUBLIC_KEY });
+      setStatus("sent");
+      formRef.current.reset();
+      setTimeout(() => setStatus("idle"), 4000);
+    } catch (err) {
+      console.error("EmailJS error:", err);
+      setStatus("error");
+      setTimeout(() => setStatus("idle"), 4000);
+    }
+  };
+
+  const buttonLabel =
+    status === "sending" ? "Sending..." :
+    status === "sent" ? "Message Sent ✓" :
+    status === "error" ? "Failed — try again" : null;
 
   return (
     <section id="contact" className="relative py-24 md:py-32">
@@ -30,20 +57,13 @@ export function Contact() {
               </div>
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setSent(true);
-                setTimeout(() => setSent(false), 3000);
-              }}
-              className="glass rounded-2xl p-6 md:p-8"
-            >
+            <form ref={formRef} onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Name" id="name" />
-                <Field label="Email" id="email" type="email" />
+                <Field label="Name" id="name" name="from_name" />
+                <Field label="Email" id="email" name="from_email" type="email" />
               </div>
               <div className="mt-4">
-                <Field label="Subject" id="subject" />
+                <Field label="Subject" id="subject" name="subject" />
               </div>
               <div className="mt-4">
                 <label htmlFor="message" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -51,6 +71,7 @@ export function Contact() {
                 </label>
                 <textarea
                   id="message"
+                  name="message"
                   rows={5}
                   required
                   className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/60 focus:bg-white/10 focus:ring-2 focus:ring-primary/30"
@@ -59,9 +80,10 @@ export function Contact() {
               </div>
               <button
                 type="submit"
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:scale-[1.02]"
+                disabled={status === "sending"}
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:scale-[1.02] disabled:opacity-70"
               >
-                {sent ? "Message Sent ✓" : (<>Send Message <Send className="h-4 w-4" /></>)}
+                {buttonLabel ?? (<>Send Message <Send className="h-4 w-4" /></>)}
               </button>
             </form>
           </div>
@@ -88,7 +110,7 @@ function ContactRow({
   return href ? (<a href={href} target="_blank" rel="noreferrer">{content}</a>) : content;
 }
 
-function Field({ label, id, type = "text" }: { label: string; id: string; type?: string }) {
+function Field({ label, id, name, type = "text" }: { label: string; id: string; name: string; type?: string }) {
   return (
     <div>
       <label htmlFor={id} className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -96,6 +118,7 @@ function Field({ label, id, type = "text" }: { label: string; id: string; type?:
       </label>
       <input
         id={id}
+        name={name}
         type={type}
         required
         className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/60 focus:bg-white/10 focus:ring-2 focus:ring-primary/30"
