@@ -82,11 +82,12 @@ export function Hero() {
               Contact Me
             </a>
             <a
-              href="#"
+              href="/Sanya_Verma_Resume.pdf"
+              download="Sanya_Verma_Resume.pdf"
               className="group inline-flex items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               <Download className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
-              Resume
+              Download Resume
             </a>
           </div>
 
