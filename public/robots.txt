@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sanya-verma-portfol.lovable.app/sitemap.xml
