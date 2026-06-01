@@ -1,5 +1,5 @@
 import { Github, Linkedin, Mail, MapPin, Phone, Send } from "lucide-react";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import emailjs from "@emailjs/browser";
 import { SectionLabel } from "./About";
 
@@ -7,30 +7,57 @@ const SERVICE_ID = "service_ixas1nb";
 const TEMPLATE_ID = "template_d6t0bie";
 const PUBLIC_KEY = "itmdpQSjCRsdhWfgs";
 
+type FormState = {
+  from_name: string;
+  from_email: string;
+  subject: string;
+  message: string;
+};
+
+const EMPTY: FormState = { from_name: "", from_email: "", subject: "", message: "" };
+
 export function Contact() {
-  const formRef = useRef<HTMLFormElement>(null);
+  const [form, setForm] = useState<FormState>(EMPTY);
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!formRef.current) return;
     setStatus("sending");
+    setErrorMsg("");
     try {
-      await emailjs.sendForm(SERVICE_ID, TEMPLATE_ID, formRef.current, { publicKey: PUBLIC_KEY });
+      await emailjs.send(
+        SERVICE_ID,
+        TEMPLATE_ID,
+        {
+          from_name: form.from_name,
+          from_email: form.from_email,
+          subject: form.subject,
+          message: form.message,
+        },
+        { publicKey: PUBLIC_KEY }
+      );
       setStatus("sent");
-      formRef.current.reset();
-      setTimeout(() => setStatus("idle"), 4000);
-    } catch (err) {
+      setForm(EMPTY);
+      setTimeout(() => setStatus("idle"), 5000);
+    } catch (err: unknown) {
       console.error("EmailJS error:", err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "text" in err
+          ? String((err as { text: unknown }).text)
+          : "Unknown error — check console.";
+      setErrorMsg(msg);
       setStatus("error");
-      setTimeout(() => setStatus("idle"), 4000);
+      setTimeout(() => setStatus("idle"), 6000);
     }
   };
-
-  const buttonLabel =
-    status === "sending" ? "Sending..." :
-    status === "sent" ? "Message Sent ✓" :
-    status === "error" ? "Failed — try again" : null;
 
   return (
     <section id="contact" className="relative py-24 md:py-32">
@@ -57,13 +84,32 @@ export function Contact() {
               </div>
             </div>
 
-            <form ref={formRef} onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8">
+            <form onSubmit={handleSubmit} className="glass rounded-2xl p-6 md:p-8">
               <div className="grid gap-4 sm:grid-cols-2">
-                <Field label="Name" id="name" name="from_name" />
-                <Field label="Email" id="email" name="from_email" type="email" />
+                <Field
+                  label="Name"
+                  id="name"
+                  name="from_name"
+                  value={form.from_name}
+                  onChange={handleChange}
+                />
+                <Field
+                  label="Email"
+                  id="email"
+                  name="from_email"
+                  type="email"
+                  value={form.from_email}
+                  onChange={handleChange}
+                />
               </div>
               <div className="mt-4">
-                <Field label="Subject" id="subject" name="subject" />
+                <Field
+                  label="Subject"
+                  id="subject"
+                  name="subject"
+                  value={form.subject}
+                  onChange={handleChange}
+                />
               </div>
               <div className="mt-4">
                 <label htmlFor="message" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -74,16 +120,41 @@ export function Contact() {
                   name="message"
                   rows={5}
                   required
+                  value={form.message}
+                  onChange={handleChange}
                   className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/60 focus:bg-white/10 focus:ring-2 focus:ring-primary/30"
                   placeholder="Tell me about your project..."
                 />
               </div>
+
+              {status === "sent" && (
+                <p className="mt-3 rounded-lg bg-emerald-500/15 px-4 py-2 text-sm text-emerald-400">
+                  ✓ Message sent! I'll get back to you soon.
+                </p>
+              )}
+              {status === "error" && (
+                <p className="mt-3 rounded-lg bg-red-500/15 px-4 py-2 text-sm text-red-400">
+                  ✗ Failed to send{errorMsg ? `: ${errorMsg}` : ""}. Please try again or email me directly.
+                </p>
+              )}
+
               <button
                 type="submit"
                 disabled={status === "sending"}
-                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:scale-[1.02] disabled:opacity-70"
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 text-sm font-medium text-primary-foreground shadow-glow transition-transform hover:scale-[1.02] disabled:opacity-70"
               >
-                {buttonLabel ?? (<>Send Message <Send className="h-4 w-4" /></>)}
+                {status === "sending" ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Sending…
+                  </>
+                ) : status === "sent" ? (
+                  "Message Sent ✓"
+                ) : (
+                  <>
+                    Send Message <Send className="h-4 w-4" />
+                  </>
+                )}
               </button>
             </form>
           </div>
@@ -110,7 +181,16 @@ function ContactRow({
   return href ? (<a href={href} target="_blank" rel="noreferrer">{content}</a>) : content;
 }
 
-function Field({ label, id, name, type = "text" }: { label: string; id: string; name: string; type?: string }) {
+function Field({
+  label, id, name, type = "text", value, onChange,
+}: {
+  label: string;
+  id: string;
+  name: string;
+  type?: string;
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}) {
   return (
     <div>
       <label htmlFor={id} className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -121,6 +201,9 @@ function Field({ label, id, name, type = "text" }: { label: string; id: string; 
         name={name}
         type={type}
         required
+        value={value}
+        onChange={onChange}
+        autoComplete={type === "email" ? "email" : name === "from_name" ? "name" : "off"}
         className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-foreground outline-none transition-all placeholder:text-muted-foreground/60 focus:border-primary/60 focus:bg-white/10 focus:ring-2 focus:ring-primary/30"
         placeholder={label}
       />
